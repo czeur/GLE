@@ -74,6 +74,9 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
   // Sparsity pattern from column solutions (preserves exact LASSO zeros)
   umat graph(d, d, fill::zeros);
 
+  // Theta assembled from column solutions (fallback when inv_sympd fails)
+  mat Theta_direct(d, d, fill::zeros);
+
   // Iteration
   double delta = 1.0;
   int iteration = 1;
@@ -137,6 +140,12 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
       for (int i = 0; i < d - 1; i++) {
         graph(notj(i), j) = (alpha(i) == 0.0) ? 1 : 0;
       }
+
+      // Store column solution in Theta_direct (preserves exact zeros)
+      for (int i = 0; i < d - 1; i++) {
+        Theta_direct(notj(i), j) = theta12(i);
+      }
+      Theta_direct(j, j) = 1.0 / w22star + dot(theta12, tmp_vec);
     }
 
     // Symmetrize (once per outer iteration for numerical safety)
@@ -147,8 +156,8 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
 
   mat Theta;
   if (!inv_sympd(Theta, W)) {
-    // W not positive definite — add small ridge and retry
-    Theta = inv_sympd(W + 1e-10 * eye<mat>(d, d));
+    // W not positive definite — fall back to column-assembled Theta
+    Theta = (Theta_direct + Theta_direct.t()) / 2.0;
   }
 
   // Symmetrize graph: absent only if absent from both column solutions
