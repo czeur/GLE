@@ -6,8 +6,15 @@ using namespace arma;
 // Trim matrix: W - min(c, c_max) * ones
 static mat trim_matrix_cpp(const mat& W, double c) {
   int d = W.n_rows;
-  double c_max = 1.0 / accu(inv_sympd(W));
-  double c_use = std::min(c, c_max);
+  mat Winv;
+  double c_use;
+  if (inv_sympd(Winv, W)) {
+    double c_max = 1.0 / accu(Winv);
+    c_use = std::min(c, c_max);
+  } else {
+    // W is singular — c_max is infinity, so c_use = c
+    c_use = c;
+  }
   return W - c_use * ones(d, d);
 }
 
