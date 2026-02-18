@@ -109,11 +109,16 @@ for (si in seq_along(settings)) {
     # --- EGLearn ---
     res_e <- tryCatch({
       t0 <- proc.time()
-      fit_eg <- eglearn(data, p = s$q_threshold, rholist = rho_range, reg_method = "ns")
+      fit_eg <- R.utils::withTimeout(
+        eglearn(data, p = s$q_threshold, rholist = rho_range, reg_method = "ns"),
+        timeout = 120
+      )
       time_eglearn <- (proc.time() - t0)[3]
       f1_e <- sapply(fit_eg$graph, function(g) F1_graph(true_graph, g))
       edges_e <- sapply(fit_eg$graph, ecount)
       list(f1_e = f1_e, edges_e = edges_e, time_eglearn = time_eglearn)
+    }, TimeoutException = function(e) {
+      list(f1_e = rep(NA, nrho), edges_e = rep(NA, nrho), time_eglearn = NA)
     }, error = function(e) {
       list(f1_e = rep(NA, nrho), edges_e = rep(NA, nrho), time_eglearn = NA)
     })
