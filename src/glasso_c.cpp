@@ -145,7 +145,11 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
     delta = mean(mean(abs(W - W_old)));
   }
 
-  mat Theta = inv_sympd(W);
+  mat Theta;
+  if (!inv_sympd(Theta, W)) {
+    // W not positive definite — add small ridge and retry
+    Theta = inv_sympd(W + 1e-10 * eye<mat>(d, d));
+  }
 
   // Symmetrize graph: absent only if absent from both column solutions
   graph = graph % graph.t();
