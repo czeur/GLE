@@ -1,7 +1,15 @@
 # Full simulation: glasso_c vs EGLearn across all settings
 # Run on remote machine with 15 cores
 #
+# Usage: nohup Rscript --vanilla run/run_full_simulation.R > output.log 2>&1 &
+#        tail -f output.log
+#
 # Output: one RDS file per setting in output/full_sim/
+
+# Unbuffered logging (so tail -f works)
+log <- function(...) {
+  cat(...); flush.console()
+}
 
 source("R/load_all.R")
 source("R/parallel.R")
@@ -33,10 +41,10 @@ for (m_val in c(1, 2)) {
   }
 }
 
-cat(sprintf("Total settings: %d\n", length(settings)))
-cat(sprintf("Samples per setting: %d\n", nsim))
-cat(sprintf("Cores: %d\n", ncores))
-cat(sprintf("Lambda values: %d, Rho values: %d\n\n",
+log(sprintf("Total settings: %d\n", length(settings)))
+log(sprintf("Samples per setting: %d\n", nsim))
+log(sprintf("Cores: %d\n", ncores))
+log(sprintf("Lambda values: %d, Rho values: %d\n\n",
             length(lambda_range), length(rho_range)))
 
 # === F1 from igraph objects (for EGLearn) ===
@@ -59,11 +67,11 @@ for (si in seq_along(settings)) {
   outfile <- sprintf("output/full_sim/%s.rds", tag)
 
   if (file.exists(outfile)) {
-    cat(sprintf("[%d/%d] %s — already exists, skipping\n", si, length(settings), tag))
+    log(sprintf("[%d/%d] %s — already exists, skipping\n", si, length(settings), tag))
     next
   }
 
-  cat(sprintf("[%d/%d] %s (d=%d, k=%d, n=%d, q=%.4f)\n",
+  log(sprintf("[%d/%d] %s (d=%d, k=%d, n=%d, q=%.4f)\n",
               si, length(settings), tag, s$d, s$k, s$n, s$q_threshold))
 
   # Generate graph (fixed seed per setting)
@@ -74,7 +82,7 @@ for (si in seq_along(settings)) {
   Gamma <- graph_info$Gamma
   Theta_true <- graph_info$Theta
 
-  cat(sprintf("  True edges: %d\n", true_edges))
+  log(sprintf("  True edges: %d\n", true_edges))
 
   # One replication function
   nlambda <- length(lambda_range)
@@ -145,17 +153,17 @@ for (si in seq_along(settings)) {
 
   best_g <- which.max(colMeans(f1_glasso, na.rm = TRUE))
   best_e <- which.max(colMeans(f1_eglearn, na.rm = TRUE))
-  cat(sprintf("  glasso_c: mean F1=%.3f at log10(lam)=%.1f | mean time=%.2fs/sample",
+  log(sprintf("  glasso_c: mean F1=%.3f at log10(lam)=%.1f | mean time=%.2fs/sample",
               mean(f1_glasso[, best_g], na.rm = TRUE), log10(lambda_range[best_g]),
               mean(time_glasso, na.rm = TRUE)))
-  if (n_fail_g > 0) cat(sprintf(" | %d failed", n_fail_g))
-  cat("\n")
-  cat(sprintf("  EGLearn:  mean F1=%.3f at rho=%.3f     | mean time=%.2fs/sample",
+  if (n_fail_g > 0) log(sprintf(" | %d failed", n_fail_g))
+  log("\n")
+  log(sprintf("  EGLearn:  mean F1=%.3f at rho=%.3f     | mean time=%.2fs/sample",
               mean(f1_eglearn[, best_e], na.rm = TRUE), rho_range[best_e],
               mean(time_eglearn, na.rm = TRUE)))
-  if (n_fail_e > 0) cat(sprintf(" | %d failed", n_fail_e))
-  cat("\n")
-  cat(sprintf("  Total elapsed: %.0fs\n\n", elapsed))
+  if (n_fail_e > 0) log(sprintf(" | %d failed", n_fail_e))
+  log("\n")
+  log(sprintf("  Total elapsed: %.0fs\n\n", elapsed))
 
   # Save
   sim_result <- list(
@@ -179,7 +187,7 @@ for (si in seq_along(settings)) {
     elapsed = elapsed
   )
   saveRDS(sim_result, outfile)
-  cat(sprintf("  Saved: %s\n\n", outfile))
+  log(sprintf("  Saved: %s\n\n", outfile))
 }
 
-cat("All settings complete.\n")
+log("All settings complete.\n")
