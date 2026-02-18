@@ -77,30 +77,40 @@ for (si in seq_along(settings)) {
   cat(sprintf("  True edges: %d\n", true_edges))
 
   # One replication function
+  nlambda <- length(lambda_range)
+  nrho <- length(rho_range)
+
   one_rep <- function(rep_id) {
     # Generate data
     data <- generate_data(s$distribution, s$n, s$d, Gamma)
 
     # --- glasso_c ---
-    t0 <- proc.time()
-    path <- glasso_path(data, lambda_range, s$q_threshold)
-    time_glasso <- (proc.time() - t0)[3]
-
-    f1_g <- sapply(path$results, function(r) F1score(Theta_true, r$Theta_hat))
-    edges_g <- sapply(path$results, function(r) {
-      adj <- r$Theta_hat != 0; diag(adj) <- FALSE; sum(adj) / 2
+    res_g <- tryCatch({
+      t0 <- proc.time()
+      path <- glasso_path(data, lambda_range, s$q_threshold)
+      time_glasso <- (proc.time() - t0)[3]
+      f1_g <- sapply(path$results, function(r) F1score(Theta_true, r$Theta_hat))
+      edges_g <- sapply(path$results, function(r) {
+        adj <- r$Theta_hat != 0; diag(adj) <- FALSE; sum(adj) / 2
+      })
+      list(f1_g = f1_g, edges_g = edges_g, time_glasso = time_glasso)
+    }, error = function(e) {
+      list(f1_g = rep(NA, nlambda), edges_g = rep(NA, nlambda), time_glasso = NA)
     })
 
     # --- EGLearn ---
-    t0 <- proc.time()
-    fit_eg <- eglearn(data, p = s$q_threshold, rholist = rho_range, reg_method = "ns")
-    time_eglearn <- (proc.time() - t0)[3]
+    res_e <- tryCatch({
+      t0 <- proc.time()
+      fit_eg <- eglearn(data, p = s$q_threshold, rholist = rho_range, reg_method = "ns")
+      time_eglearn <- (proc.time() - t0)[3]
+      f1_e <- sapply(fit_eg$graph, function(g) F1_graph(true_graph, g))
+      edges_e <- sapply(fit_eg$graph, ecount)
+      list(f1_e = f1_e, edges_e = edges_e, time_eglearn = time_eglearn)
+    }, error = function(e) {
+      list(f1_e = rep(NA, nrho), edges_e = rep(NA, nrho), time_eglearn = NA)
+    })
 
-    f1_e <- sapply(fit_eg$graph, function(g) F1_graph(true_graph, g))
-    edges_e <- sapply(fit_eg$graph, ecount)
-
-    list(f1_g = f1_g, edges_g = edges_g, time_glasso = time_glasso,
-         f1_e = f1_e, edges_e = edges_e, time_eglearn = time_eglearn)
+    c(res_g, res_e)
   }
 
   # Worker setup
@@ -117,7 +127,7 @@ for (si in seq_along(settings)) {
     seed = seed_base + si,
     setup_fn = worker_setup,
     export_vars = c("s", "Gamma", "Theta_true", "true_graph",
-                    "lambda_range", "rho_range", "F1_graph"),
+                    "lambda_range", "rho_range", "nlambda", "nrho", "F1_graph"),
     export_env = environment()
   )
   elapsed <- (proc.time() - t_total)[3]
@@ -130,12 +140,21 @@ for (si in seq_along(settings)) {
   time_glasso  <- sapply(results, `[[`, "time_glasso")
   time_eglearn <- sapply(results, `[[`, "time_eglearn")
 
-  best_g <- which.max(colMeans(f1_glasso))
-  best_e <- which.max(colMeans(f1_eglearn))
-  cat(sprintf("  glasso_c: mean F1=%.3f at log10(lam)=%.1f | mean time=%.2fs/sample\n",
-              mean(f1_glasso[, best_g]), log10(lambda_range[best_g]), mean(time_glasso)))
-  cat(sprintf("  EGLearn:  mean F1=%.3f at rho=%.3f     | mean time=%.2fs/sample\n",
-              mean(f1_eglearn[, best_e]), rho_range[best_e], mean(time_eglearn)))
+  n_fail_g <- sum(is.na(time_glasso))
+  n_fail_e <- sum(is.na(time_eglearn))
+
+  best_g <- which.max(colMeans(f1_glasso, na.rm = TRUE))
+  best_e <- which.max(colMeans(f1_eglearn, na.rm = TRUE))
+  cat(sprintf("  glasso_c: mean F1=%.3f at log10(lam)=%.1f | mean time=%.2fs/sample",
+              mean(f1_glasso[, best_g], na.rm = TRUE), log10(lambda_range[best_g]),
+              mean(time_glasso, na.rm = TRUE)))
+  if (n_fail_g > 0) cat(sprintf(" | %d failed", n_fail_g))
+  cat("\n")
+  cat(sprintf("  EGLearn:  mean F1=%.3f at rho=%.3f     | mean time=%.2fs/sample",
+              mean(f1_eglearn[, best_e], na.rm = TRUE), rho_range[best_e],
+              mean(time_eglearn, na.rm = TRUE)))
+  if (n_fail_e > 0) cat(sprintf(" | %d failed", n_fail_e))
+  cat("\n")
   cat(sprintf("  Total elapsed: %.0fs\n\n", elapsed))
 
   # Save
