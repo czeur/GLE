@@ -60,7 +60,7 @@ static vec lasso_cd(const mat& A, const vec& b, double lambda,
 
 // [[Rcpp::export]]
 List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
-                  int iter_max = 1000) {
+                  int iter_max = 200) {
   int d = S.n_rows;
 
   // Compute convergence tolerance from scale of S
@@ -171,7 +171,7 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
 
 // [[Rcpp::export]]
 List glasso_c_reest_cpp(arma::mat S, double lambda, double c = 0.0,
-                        int iter_max = 1000) {
+                        int iter_max = 200) {
   int d = S.n_rows;
 
   if (c == 0.0) {
