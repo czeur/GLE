@@ -135,6 +135,7 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
       W(notj, jj) = w12;
       W(jj, notj) = w12.t();
       W(j, j) = w22;
+      W = (W + W.t()) / 2.0;
 
       // Track sparsity from exact LASSO zeros: alpha==0 means theta12==c
       for (int i = 0; i < d - 1; i++) {
@@ -147,9 +148,6 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
       }
       Theta_direct(j, j) = 1.0 / w22star + dot(theta12, tmp_vec);
     }
-
-    // Symmetrize (once per outer iteration for numerical safety)
-    W = (W + W.t()) / 2.0;
 
     delta = mean(mean(abs(W - W_old)));
   }

@@ -13,7 +13,7 @@ Rcpp::sourceCpp("src/glasso_c.cpp")
 #' @param iter.max Maximum number of iterations (default 1000)
 #' @return List with Theta (precision matrix), Sigma (covariance estimate),
 #'   and graph (logical matrix, TRUE = edge absent)
-glasso_c <- function(S, lambda, c = 0, iter.max = 1000) {
+glasso_c <- function(S, lambda, c = 0, iter.max = 200) {
   res <- glasso_c_cpp(S, lambda, c, iter.max)
   res$graph <- res$graph == 1
   res
@@ -30,7 +30,7 @@ glasso_c <- function(S, lambda, c = 0, iter.max = 1000) {
 #' @param iter.max Maximum iterations (default 1000)
 #' @return List with Theta_hat (precision matrix) and graph (logical matrix,
 #'   TRUE = edge absent)
-glasso_c_reest <- function(S, lambda, c = 0, iter.max = 1000) {
+glasso_c_reest <- function(S, lambda, c = 0, iter.max = 200) {
   res <- glasso_c_reest_cpp(S, lambda, c, iter.max)
   # C++ returns graph as numeric 0/1; convert to logical for safe R indexing
   res$graph <- res$graph == 1

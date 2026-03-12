@@ -16,7 +16,7 @@
 #'   - lambda_range: the lambdas used
 #'   - results: list of length(lambda_range), each with Theta_hat and graph
 glasso_path <- function(data, lambda_range, q_threshold,
-                        iter_max = 1000) {
+                        iter_max = 200) {
   d <- ncol(data)
 
   # Step 1: Compute W matrix once

@@ -95,18 +95,13 @@ for (si in seq_along(settings)) {
     # --- glasso_c ---
     res_g <- tryCatch({
       t0 <- proc.time()
-      path <- R.utils::withTimeout(
-        glasso_path(data, lambda_range, s$q_threshold),
-        timeout = 120
-      )
+      path <- glasso_path(data, lambda_range, s$q_threshold)
       time_glasso <- (proc.time() - t0)[3]
       f1_g <- sapply(path$results, function(r) F1score(Theta_true, r$Theta_hat))
       edges_g <- sapply(path$results, function(r) {
         adj <- r$Theta_hat != 0; diag(adj) <- FALSE; sum(adj) / 2
       })
       list(f1_g = f1_g, edges_g = edges_g, time_glasso = time_glasso)
-    }, TimeoutException = function(e) {
-      list(f1_g = rep(NA, nlambda), edges_g = rep(NA, nlambda), time_glasso = NA)
     }, error = function(e) {
       list(f1_g = rep(NA, nlambda), edges_g = rep(NA, nlambda), time_glasso = NA)
     })
