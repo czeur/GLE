@@ -38,5 +38,4 @@ Review order follows the dependency chain (bottom-up). Files grouped by how much
 
 ## Priority 7: Documentation
 
-- [ ] `CLAUDE.md`
 - [ ] `README.md`

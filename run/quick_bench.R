@@ -1,7 +1,7 @@
 # Quick benchmark: 4 settings, 3 reps, comparing cpp vs glmnet vs EGLearn
 # Usage: Rscript --vanilla run/quick_bench.R
 
-setwd("/Users/czhou3/Documents/zhou/claudebot/projects/graphical/GLE")
+# Run from repo root: Rscript --vanilla run/quick_bench.R
 source("R/load_all.R")
 source("R/eglearn.R")
 

@@ -1,7 +1,7 @@
 # Quick benchmark: glmnet solver vs EGLearn (no C++ compilation needed)
 # Usage: Rscript --vanilla run/quick_bench_glmnet_only.R
 
-setwd("/Users/czhou3/Documents/zhou/claudebot/projects/graphical/GLE")
+# Run from repo root: Rscript --vanilla run/quick_bench_glmnet_only.R
 
 library(graphicalExtremes)
 library(igraph)

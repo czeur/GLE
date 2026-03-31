@@ -2,7 +2,7 @@
 # 4 settings, 5 reps each
 # Usage: Rscript --vanilla run/quick_bench_all.R
 
-setwd("/Users/czhou3/Documents/zhou/claudebot/projects/graphical/GLE")
+# Run from repo root: Rscript --vanilla run/quick_bench_all.R
 source("R/load_all.R")
 source("R/eglearn.R")
 
