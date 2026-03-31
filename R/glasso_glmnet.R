@@ -46,8 +46,16 @@ glasso_c_glmnet <- function(S, lambda, c = 0, iter.max = 200) {
       n_obs <- d - 1
       R <- tryCatch(chol(Theta11Inv), error = function(e) NULL)
       if (is.null(R)) {
-        # Theta11Inv not PD; add small ridge and retry
-        R <- chol(Theta11Inv + 1e-8 * diag(n_obs))
+        # Theta11Inv not PD; add progressively larger ridge until it works
+        for (ridge in c(1e-8, 1e-6, 1e-4, 1e-2)) {
+          R <- tryCatch(chol(Theta11Inv + ridge * diag(n_obs)), error = function(e) NULL)
+          if (!is.null(R)) break
+        }
+        if (is.null(R)) {
+          # Skip this column update entirely
+          graph[notj, j] <- 1L
+          next
+        }
       }
       # R is upper triangular: t(R) %*% R = Theta11Inv
       X <- sqrt(n_obs) * t(R)  # n_obs x n_obs, lower triangular
