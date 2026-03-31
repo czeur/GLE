@@ -3,59 +3,53 @@
 using namespace Rcpp;
 using namespace arma;
 
-// Coordinate descent LASSO solver
-// Solves: min 0.5 * ||A * beta - b||^2 + lambda * ||beta||_1
-// A is (d-1) x (d-1), b is (d-1), lambda is scalar
-static vec lasso_cd(const mat& A, const vec& b, double lambda,
-                    int max_iter = 1000, double tol = 1e-7) {
-  int p = A.n_cols;
-  int n = A.n_rows;
-  vec beta(p, fill::zeros);
-  vec residual = -b;  // residual = A*beta - b, starts as -b since beta=0
+// Gram-based coordinate descent LASSO solver
+// Solves: min 0.5 * alpha^T * G * alpha + h^T * alpha + lambda * ||alpha||_1
+// G is (d-1) x (d-1) symmetric positive definite (Gram matrix)
+// h is (d-1) linear term
+// alpha_init is warm-start initialization (zeros if empty)
+static vec lasso_gram_cd(const mat& G, const vec& h, double lambda,
+                         const vec& alpha_init,
+                         int max_iter = 1000, double tol = 1e-7) {
+  int p = G.n_cols;
+  vec alpha = alpha_init.n_elem == (uword)p ? alpha_init : vec(p, fill::zeros);
 
-  // Precompute A^T A columns norms and A^T b
-  // For coordinate descent: update_j = (A_j^T (b - A_{-j} beta_{-j})) / (A_j^T A_j)
-  // We use the residual form for efficiency
-  vec AtA_diag(p);
-  for (int j = 0; j < p; j++) {
-    AtA_diag(j) = dot(A.col(j), A.col(j));
-  }
+  // Precompute G * alpha for residual tracking
+  vec Galpha = G * alpha;
 
   for (int iter = 0; iter < max_iter; iter++) {
     double max_change = 0.0;
 
     for (int j = 0; j < p; j++) {
-      double beta_old = beta(j);
+      double alpha_old = alpha(j);
 
-      // partial residual: rho_j = A_j^T (b - A_{-j} beta_{-j})
-      //                         = A_j^T b - A_j^T A_{-j} beta_{-j}
-      //                         = A_j^T (b - A*beta + A_j * beta_j)
-      //                         = -A_j^T residual + AtA_diag(j) * beta_j
-      double rho_j = -dot(A.col(j), residual) + AtA_diag(j) * beta_old;
+      // Partial gradient excluding j-th diagonal: -(h_j + sum_{k!=j} G_{jk} alpha_k)
+      double rho_j = -(h(j) + Galpha(j) - G(j, j) * alpha_old);
 
       // Soft thresholding
-      double beta_new;
+      double alpha_new;
       if (rho_j > lambda) {
-        beta_new = (rho_j - lambda) / AtA_diag(j);
+        alpha_new = (rho_j - lambda) / G(j, j);
       } else if (rho_j < -lambda) {
-        beta_new = (rho_j + lambda) / AtA_diag(j);
+        alpha_new = (rho_j + lambda) / G(j, j);
       } else {
-        beta_new = 0.0;
+        alpha_new = 0.0;
       }
 
-      if (beta_new != beta_old) {
-        // Update residual: residual += A_j * (beta_new - beta_old)
-        residual += A.col(j) * (beta_new - beta_old);
-        double change = std::abs(beta_new - beta_old);
+      if (alpha_new != alpha_old) {
+        double diff = alpha_new - alpha_old;
+        // Update Galpha incrementally: O(p) instead of O(p^2)
+        Galpha += G.col(j) * diff;
+        alpha(j) = alpha_new;
+        double change = std::abs(diff);
         if (change > max_change) max_change = change;
-        beta(j) = beta_new;
       }
     }
 
     if (max_change < tol) break;
   }
 
-  return beta;
+  return alpha;
 }
 
 // [[Rcpp::export]]
@@ -77,11 +71,17 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
   // Theta assembled from column solutions (fallback when inv_sympd fails)
   mat Theta_direct(d, d, fill::zeros);
 
+  // Warm-start storage: previous alpha for each column
+  std::vector<vec> alpha_prev(d);
+  for (int j = 0; j < d; j++) {
+    alpha_prev[j] = vec(d - 1, fill::zeros);
+  }
+
   // Iteration
   double delta = 1.0;
-  int iteration = 1;
+  int iteration = 0;
 
-  while (delta > tol && iteration <= iter_max) {
+  while (delta > tol && iteration < iter_max) {
     iteration++;
     mat W_old = W;
 
@@ -102,25 +102,13 @@ List glasso_c_cpp(arma::mat S, double lambda, double c = 0.0,
 
       mat Theta11Inv = W11 - w12 * w12.t() / w22;
 
-      // Eigen decomposition
-      vec eigval;
-      mat eigvec;
-      eig_sym(eigval, eigvec, Theta11Inv);
+      // Linear term for the Gram-based lasso:
+      // min 0.5 * alpha^T * Theta11Inv * alpha + h^T * alpha + lambda * ||alpha||_1
+      vec h = s12 + (c * w22star) * (Theta11Inv * ones<vec>(d - 1));
 
-      // Compute A = Q * diag(sqrt(eigenvalues)) * Q^T
-      vec sqrt_eigval = sqrt(clamp(eigval, 1e-12, datum::inf));
-      vec inv_sqrt_eigval = 1.0 / sqrt_eigval;
-
-      mat A = eigvec * diagmat(sqrt_eigval) * eigvec.t();
-      mat AInv = eigvec * diagmat(inv_sqrt_eigval) * eigvec.t();
-
-      // b = AInv * (-s12 - Theta11Inv * c * w22star * ones)
-      vec b = AInv * (-s12 - (c * w22star) * sum(Theta11Inv, 1));
-
-      // glmnet minimizes (1/(2n))||Ax-b||^2 + lam*||x||_1 with n=d-1, lam=lambda/(d-1)
-      // which is equivalent to minimizing (1/2)||Ax-b||^2 + lambda*||x||_1
-      // Our lasso_cd minimizes (1/2)||Ax-b||^2 + lam_cd*||x||_1, so lam_cd = lambda
-      vec alpha = lasso_cd(A, b, lambda);
+      // Solve lasso with warm start from previous iteration
+      vec alpha = lasso_gram_cd(Theta11Inv, h, lambda, alpha_prev[j]);
+      alpha_prev[j] = alpha;
 
       // theta12 = alpha / w22star + c
       vec theta12 = alpha / w22star + c;

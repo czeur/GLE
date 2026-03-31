@@ -15,6 +15,9 @@ Rcpp::sourceCpp("src/glasso_c.cpp")
 source("R/est_W.R")
 source("R/glasso_c.R")
 
+# glmnet-based alternative solver
+source("R/glasso_glmnet.R")
+
 # Core utilities (no internal dependencies)
 source("R/f1score.R")
 
