@@ -162,7 +162,7 @@ List glasso_c_reest_cpp(arma::mat S, double lambda, double c = 0.0,
 
   if (c == 0.0) {
     vec eigvals = eig_sym(S);
-    c = 1.0 / (d * eigvals(d - 2));  // second largest eigenvalue (0-indexed, sorted ascending)
+    c = 1.0 / (d * eigvals(1));  // smallest positive eigenvalue (eigvals[0] ≈ 0)
   }
 
   // Modify S
