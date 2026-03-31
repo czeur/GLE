@@ -19,7 +19,7 @@ ncores <- 15
 nsim <- 100
 seed_base <- 42
 
-lambda_range <- 10^seq(-1, 1, by = 0.1)   # 21 values
+lambda_range <- 10^seq(-1.2, 0, by = 0.1)  # 13 values, focused on useful range
 rho_range <- seq(0.025, 0.525, by = 0.025) # 21 values
 
 # Build settings grid
