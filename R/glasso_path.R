@@ -26,8 +26,9 @@ glasso_path <- function(data, lambda_range, q_threshold,
 
   # Step 2: Compute constant c
   # M = smallest positive eigenvalue of S (= lambda_2 in paper notation)
-  evals <- sort(eigen(W$cov, symmetric = TRUE, only.values = TRUE)$values)
-  c_val <- 1 / (d * evals[2])  # evals[1] ≈ 0, evals[2] = smallest positive
+  evals <- eigen(W$cov, symmetric = TRUE, only.values = TRUE)$values
+  pos_evals <- evals[evals > 1e-10]  # skip zero/negative numerical noise
+  c_val <- 1 / (d * min(pos_evals))
 
   # Step 3: Choose solver
   solver <- if (method == "glmnet") glasso_c_reest_glmnet else glasso_c_reest
