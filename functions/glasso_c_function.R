@@ -83,9 +83,12 @@ glasso_c <- function(S, lambda, c = 0, thres = 1e-2,
 glasso_c_reest <- function(S, lambda, c = 0, thres = 1e-2,
   iter.max = 1000) {
 
-  if (c == 0) c <- 1 / (d * eigen(S)$values[d-1])
-
   d <- nrow(S)
+
+  if (c == 0) {
+    ev <- eigen(S, only.values = TRUE)$values
+    c <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
+  }
 
 
   ## Initial guess

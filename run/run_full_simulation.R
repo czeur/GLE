@@ -1,10 +1,10 @@
 # Full simulation: glasso_c vs EGLearn across all settings
 # Run on remote machine with 15 cores
 #
-# Usage: nohup Rscript --vanilla run/run_full_simulation.R > output.log 2>&1 &
+# Usage: nohup Rscript --vanilla run/run_full_simulation.R [outdir] > output.log 2>&1 &
 #        tail -f output.log
 #
-# Output: one RDS file per setting in output/full_sim/
+# Output: one RDS file per setting in [outdir] (default: output/full_sim)
 
 # Unbuffered logging (so tail -f works)
 log <- function(...) {
@@ -57,14 +57,17 @@ F1_graph <- function(g_true, g_est) {
   if (prec + rec > 0) 2 * prec * rec / (prec + rec) else 0
 }
 
-# === Output directory ===
-dir.create("output/full_sim", recursive = TRUE, showWarnings = FALSE)
+# === Output directory (from command line or default) ===
+args <- commandArgs(trailingOnly = TRUE)
+outdir <- if (length(args) >= 1) args[1] else "output/full_sim"
+dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+log(sprintf("Output directory: %s\n", outdir))
 
 # === Run each setting ===
 for (si in seq_along(settings)) {
   s <- settings[[si]]
   tag <- sprintf("BA%d_%s_d%d_k%d", s$m, s$distribution, s$d, s$k)
-  outfile <- sprintf("output/full_sim/%s.rds", tag)
+  outfile <- sprintf("%s/%s.rds", outdir, tag)
 
   if (file.exists(outfile)) {
     log(sprintf("[%d/%d] %s — already exists, skipping\n", si, length(settings), tag))

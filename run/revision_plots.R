@@ -1,9 +1,13 @@
 # Generate publication-quality plots for GLE paper revision
-# Input: output/full_sim_3103/*.rds (24 settings, 100 reps each)
+# Input: [indir]/*.rds (24 settings, 100 reps each)
 # Output: output/revision_plots/*.pdf
+#
+# Usage: Rscript run/revision_plots.R [indir]
+#        Default indir: output/full_sim
 
 # === Load all results ===
-rds_dir <- "output/full_sim_3103"
+args <- commandArgs(trailingOnly = TRUE)
+rds_dir <- if (length(args) >= 1) args[1] else "output/full_sim"
 rds_files <- list.files(rds_dir, pattern = "\\.rds$", full.names = TRUE)
 if (length(rds_files) == 0) stop("No RDS files found in ", rds_dir)
 

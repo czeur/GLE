@@ -111,8 +111,9 @@ glasso_c_reest_glmnet <- function(S, lambda, c = 0, iter.max = 200) {
   d <- nrow(S)
 
   if (c == 0) {
-    eigvals <- sort(eigen(S, symmetric = TRUE, only.values = TRUE)$values)
-    c <- 1 / (d * eigvals[2])  # smallest positive eigenvalue (eigvals[1] ≈ 0)
+    eigvals <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
+    pos_eigvals <- eigvals[eigvals > 1e-10]
+    c <- 1 / (d * min(pos_eigvals))  # smallest positive eigenvalue
   }
 
   # Modify S
