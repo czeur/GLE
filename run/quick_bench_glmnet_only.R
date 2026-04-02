@@ -47,7 +47,8 @@ est_W_R <- function(data, q.threshold) {
 glasso_path_R <- function(data, lambda_range, q_threshold, iter_max = 200) {
   d <- ncol(data)
   W <- est_W_R(data, q_threshold)
-  c_val <- 1 / (d * eigen(W$cov, symmetric = TRUE, only.values = TRUE)$values[1])
+  ev <- eigen(W$cov, symmetric = TRUE, only.values = TRUE)$values
+  c_val <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
   results <- vector("list", length(lambda_range))
   for (i in seq_along(lambda_range)) {
     results[[i]] <- glasso_c_reest_glmnet(W$cov, lambda_range[i], c_val, iter_max)

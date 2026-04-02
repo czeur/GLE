@@ -24,7 +24,8 @@ glasso_bic <- function(data, lambda.range = 0, q.threshold = 0.9,
   IC <- rep(Inf, nlambda)
 
   W <- est_W(data, q.threshold)
-  c_val <- 1 / (d * eigen(W$cov)$values[1])
+  ev <- eigen(W$cov, only.values = TRUE)$values
+  c_val <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
 
   for (i in 1:nlambda) {
     lambda <- lambda.range[i]

@@ -89,7 +89,8 @@ finish_est <- Sys.time()
 
 rho <- 0.95
 thres <- 0.001
-c <- 1/(d*eigen(cov.mat)$values[1])
+ev <- eigen(cov.mat, only.values = TRUE)$values
+c <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
 print(c)
 fit <- glasso_c(cov.mat + matrix(0,d,d), lambda = rho, c=c, thres=1e-4, iter.max=1000)
 Theta_hat <- fit$Theta-c

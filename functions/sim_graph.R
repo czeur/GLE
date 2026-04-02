@@ -42,7 +42,8 @@ sim_graphs_multilambda = function(Theta, n, d, q.threshold, lambda.range = 0, th
 
     W <- est_W(data, q.threshold)
     Gamma <- emp_vario(data, p = q.threshold)
-    c <- 1 / (d * eigen(W$cov)$values[1])
+    ev <- eigen(W$cov, only.values = TRUE)$values
+    c <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
 
     k <- n * (1 - q.threshold)
 

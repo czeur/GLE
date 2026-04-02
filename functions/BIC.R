@@ -45,7 +45,8 @@ glasso_bic <- function(data, lambda.range = 0, q.threshold = 0.9,
     W <- est_W(data, q.threshold)
     # Gamma <- emp_vario(data, p = q.threshold)
     # W <- Gamma2Sigma(Gamma)
-    c <- 1 / (d * eigen(W$cov)$values[1])
+    ev <- eigen(W$cov, only.values = TRUE)$values
+    c <- 1 / (d * min(ev[ev > 1e-10]))  # smallest positive eigenvalue
 
 
     for (i in 1:nlambda){
