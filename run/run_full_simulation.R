@@ -20,7 +20,7 @@ nsim <- 100
 seed_base <- 42
 
 lambda_range <- 10^seq(-1.2, 0, by = 0.1)  # 13 values, focused on useful range
-rho_range <- seq(0.025, 0.525, by = 0.025) # 21 values
+rho_range <- seq(0.175, 0.475, by = 0.025) # 13 values, matched to EGLasso grid size
 
 # Build settings grid
 settings <- list()

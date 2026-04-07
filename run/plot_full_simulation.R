@@ -103,10 +103,12 @@ plot_time <- function(grp, key) {
     bp_at <- c(bp_at, i * 3 - 1.5, i * 3 - 0.5)
   }
 
+  time_ylim <- if (cfg1$d == 20) c(0, 3) else c(0, 70)
+
   pdf(sprintf("output/full_sim/plots/time_%s.pdf", key), width = 7, height = 5)
   par(mar = c(5.5, 4.5, 3, 1))
   boxplot(bp_data, at = bp_at, col = bp_cols, names = rep("", length(bp_data)),
-          ylab = "Estimation time per sample (s)",
+          ylim = time_ylim, ylab = "Estimation time per sample (s)",
           main = title_str, outline = FALSE, boxwex = 0.8)
 
   label_pos <- sapply(seq_len(n_ratios), function(i) mean(bp_at[c(2*i-1, 2*i)]))
